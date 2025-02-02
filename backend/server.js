@@ -84,7 +84,12 @@ app.use((req, res, next) => {
 });
 
 // CORS middleware - must be before routes
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: false
+}));
 
 // Body parser middleware
 app.use(express.json());

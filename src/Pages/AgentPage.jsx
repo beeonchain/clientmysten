@@ -66,8 +66,7 @@ function AgentPage() {
       const response = await axios.post(`${BACKEND_URL}/api/proposals`, submitData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-        },
-        withCredentials: true
+        }
       });
 
       if (response.status === 201) {

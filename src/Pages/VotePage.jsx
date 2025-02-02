@@ -51,36 +51,17 @@ function VotePage() {
 
     try {
       setVotingStatus(prev => ({ ...prev, [proposalId]: true }));
-      const toastId = toast.loading("Processing vote...");
-
-      // Skip Sui transaction for now
-      /*
-      const txb = new TransactionBlock();
-      
-      txb.moveCall({
-        target: `${PACKAGE_ID}::voting::vote`,
-        arguments: [txb.pure(proposalId)],
-      });
-
-      const result = await signAndExecuteTransactionBlock({
-        transactionBlock: txb,
-      });
-
-      if (!result?.digest) {
-        throw new Error("Transaction failed");
-      }
-      */
-
-      // Submit vote to backend
-      await axios.post(`${BACKEND_URL}/api/proposals/${proposalId}/vote`, {
+      const response = await axios.post(`${BACKEND_URL}/api/proposals/${proposalId}/vote`, {
         wallet: account.address
       });
 
-      toast.success("Vote submitted successfully!", { id: toastId });
-      fetchProposals(); // Refresh proposals
+      if (response.data) {
+        toast.success("Vote recorded successfully!");
+        fetchProposals(); // Refresh the proposals list
+      }
     } catch (error) {
-      console.error('Error voting:', error);
-      toast.error(error.response?.data?.error || "Failed to submit vote");
+      console.error('Voting error:', error);
+      toast.error(error.response?.data?.error || "Failed to record vote");
     } finally {
       setVotingStatus(prev => ({ ...prev, [proposalId]: false }));
     }
