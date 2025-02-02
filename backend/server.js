@@ -34,7 +34,6 @@ mongoose.connect(process.env.MONGODB_URI, {
     code: err.code,
     uri: process.env.MONGODB_URI ? 'URI is set' : 'URI is missing'
   });
-  // Don't exit the process, let the server start anyway
   console.log('Server will start but database operations will fail');
 });
 
@@ -68,17 +67,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Base path for all routes
-const basePath = process.env.NODE_ENV === 'production' ? '/api' : '';
-
 // Debug logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
-// Root route for health check
-app.get(basePath + '/', (req, res) => {
+// Health check route
+app.get('/', (req, res) => {
   res.json({ 
     message: 'Server is running',
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
@@ -89,8 +85,10 @@ app.get(basePath + '/', (req, res) => {
   });
 });
 
-// Routes
-app.get(basePath + '/api/proposals', async (req, res) => {
+// API Routes
+const router = express.Router();
+
+router.get('/proposals', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
@@ -103,7 +101,7 @@ app.get(basePath + '/api/proposals', async (req, res) => {
   }
 });
 
-app.post(basePath + '/api/proposals', upload.single('profilePicture'), async (req, res) => {
+router.post('/proposals', upload.single('profilePicture'), async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
@@ -136,7 +134,7 @@ app.post(basePath + '/api/proposals', upload.single('profilePicture'), async (re
   }
 });
 
-app.post(basePath + '/api/proposals/:id/vote', async (req, res) => {
+router.post('/proposals/:id/vote', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
@@ -165,6 +163,9 @@ app.post(basePath + '/api/proposals/:id/vote', async (req, res) => {
   }
 });
 
+// Mount API routes
+app.use('/api', router);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -173,7 +174,7 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
-  console.log('404 - Not Found:', req.method, req.url);
+  console.log('404 - Not Found:', req.method, req.path);
   res.status(404).json({ error: 'Not Found' });
 });
 
