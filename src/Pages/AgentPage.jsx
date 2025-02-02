@@ -50,52 +50,46 @@ function AgentPage() {
       toast.error("Please fill in all required fields (Name, Twitter, Description) and connect your wallet");
       return;
     }
-    
+
     setLoading(true);
-    const toastId = toast.loading("Submitting proposal...");
-    
+    const submitData = new FormData();
+    submitData.append('name', formData.name);
+    submitData.append('twitter', formData.twitter);
+    submitData.append('website', formData.website);
+    submitData.append('description', formData.description);
+    submitData.append('creator_wallet', creator_wallet);
+    if (formData.profilePicture) {
+      submitData.append('profilePicture', formData.profilePicture);
+    }
+
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('twitter', formData.twitter);
-      formDataToSend.append('website', formData.website || '');
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('creator_wallet', creator_wallet);
-      if (formData.profilePicture) {
-        formDataToSend.append('profilePicture', formData.profilePicture);
-      }
-      
-      const apiUrl = `${BACKEND_URL}/api/proposals`;
-      console.log('Sending data to:', apiUrl);
-      console.log('Form data:', {
-        name: formData.name,
-        twitter: formData.twitter,
-        website: formData.website || '',
-        description: formData.description,
-        creator_wallet,
-        hasProfilePicture: !!formData.profilePicture
-      });
-      
-      const response = await axios.post(apiUrl, formDataToSend, {
+      const response = await axios.post(`${BACKEND_URL}/api/proposals`, submitData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
         },
         withCredentials: true
       });
-      console.log('Response:', response.data);
 
-      toast.success("Proposal submitted successfully!", { id: toastId });
-      setFormData({ name: "", twitter: "", website: "", description: "", profilePicture: null });
-      setPreviewUrl(null);
+      if (response.status === 201) {
+        toast.success("Proposal submitted successfully!");
+        // Clear form
+        setFormData({
+          name: "",
+          twitter: "",
+          website: "",
+          description: "",
+          profilePicture: null
+        });
+        setPreviewUrl(null);
+        // Navigate to home page
+        navigate('/');
+      }
     } catch (error) {
-      console.error('Submission error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        headers: error.response?.headers
-      });
-      const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
-      toast.error(`Submission failed: ${errorMessage}`, { id: toastId });
+      console.error('Submission error:', error);
+      // Don't show error toast if we got a successful response
+      if (!error.response || error.response.status !== 201) {
+        toast.error(error.response?.data?.error || "Failed to submit proposal");
+      }
     } finally {
       setLoading(false);
     }
