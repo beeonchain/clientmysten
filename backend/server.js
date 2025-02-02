@@ -68,6 +68,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Base path for all routes
+const basePath = process.env.NODE_ENV === 'production' ? '/api' : '';
+
 // Debug logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -75,7 +78,7 @@ app.use((req, res, next) => {
 });
 
 // Root route for health check
-app.get('/', (req, res) => {
+app.get(basePath + '/', (req, res) => {
   res.json({ 
     message: 'Server is running',
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
@@ -87,7 +90,7 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-app.get('/api/proposals', async (req, res) => {
+app.get(basePath + '/api/proposals', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
@@ -100,7 +103,7 @@ app.get('/api/proposals', async (req, res) => {
   }
 });
 
-app.post('/api/proposals', upload.single('profilePicture'), async (req, res) => {
+app.post(basePath + '/api/proposals', upload.single('profilePicture'), async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
@@ -133,7 +136,7 @@ app.post('/api/proposals', upload.single('profilePicture'), async (req, res) => 
   }
 });
 
-app.post('/api/proposals/:id/vote', async (req, res) => {
+app.post(basePath + '/api/proposals/:id/vote', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
