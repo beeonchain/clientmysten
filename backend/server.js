@@ -60,36 +60,17 @@ async function uploadToCloudinary(buffer) {
   });
 }
 
-// Middleware
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      'http://localhost:5173',  // Vite dev server
-      'http://localhost:3000'   // Alternative local dev
-    ].filter(Boolean); // Remove any undefined values
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
-      callback(null, true);
-    } else {
-      console.log('Blocked by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
-app.use(express.json());
-
 // Debug logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
+
+// CORS middleware - must be before routes
+app.use(cors());
+
+// Body parser middleware
+app.use(express.json());
 
 // Health check route
 app.get('/', (req, res) => {
@@ -104,27 +85,25 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
-const router = express.Router();
-
-router.get('/proposals', async (req, res) => {
+app.get('/api/proposals', async (req, res) => {
   try {
-    console.log('GET /proposals - Checking database connection');
+    console.log('GET /api/proposals - Checking database connection');
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
     }
 
-    console.log('GET /proposals - Fetching proposals from database');
+    console.log('GET /api/proposals - Fetching proposals from database');
     const proposals = await Proposal.find().sort({ createdAt: -1 });
-    console.log(`GET /proposals - Found ${proposals.length} proposals`);
+    console.log(`GET /api/proposals - Found ${proposals.length} proposals`);
     
     res.json(proposals);
   } catch (error) {
-    console.error('GET /proposals - Error:', error);
+    console.error('GET /api/proposals - Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-router.post('/proposals', upload.single('profilePicture'), async (req, res) => {
+app.post('/api/proposals', upload.single('profilePicture'), async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
@@ -157,7 +136,7 @@ router.post('/proposals', upload.single('profilePicture'), async (req, res) => {
   }
 });
 
-router.post('/proposals/:id/vote', async (req, res) => {
+app.post('/api/proposals/:id/vote', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
@@ -185,9 +164,6 @@ router.post('/proposals/:id/vote', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
-
-// Mount API routes
-app.use('/api', router);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
