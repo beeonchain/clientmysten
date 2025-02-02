@@ -15,21 +15,28 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Connect to MongoDB
+const app = express();
+const port = process.env.PORT || 10000;
+
+// Connect to MongoDB with better error handling
+console.log('Attempting to connect to MongoDB...');
 mongoose.connect(process.env.MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
   dbName: 'mystenlabs'
 })
 .then(() => {
-  console.log('Connected to MongoDB');
+  console.log('Successfully connected to MongoDB');
 })
 .catch(err => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
+  console.error('MongoDB connection error details:', {
+    name: err.name,
+    message: err.message,
+    code: err.code,
+    uri: process.env.MONGODB_URI ? 'URI is set' : 'URI is missing'
+  });
+  // Don't exit the process, let the server start anyway
+  console.log('Server will start but database operations will fail');
 });
-
-const app = express();
-const port = process.env.PORT || 10000;
 
 // Multer configuration for file uploads
 const storage = multer.memoryStorage();
@@ -61,9 +68,30 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Debug logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Root route for health check
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Server is running',
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    env: {
+      mongoDbConfigured: !!process.env.MONGODB_URI,
+      cloudinaryConfigured: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
+    }
+  });
+});
+
 // Routes
 app.get('/api/proposals', async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database not connected');
+    }
     const proposals = await Proposal.find().sort({ createdAt: -1 });
     res.json(proposals);
   } catch (error) {
@@ -74,6 +102,9 @@ app.get('/api/proposals', async (req, res) => {
 
 app.post('/api/proposals', upload.single('profilePicture'), async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database not connected');
+    }
     const { name, twitter, website, description, creator_wallet } = req.body;
     
     let imageData = null;
@@ -104,6 +135,9 @@ app.post('/api/proposals', upload.single('profilePicture'), async (req, res) => 
 
 app.post('/api/proposals/:id/vote', async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database not connected');
+    }
     const { wallet } = req.body;
     const proposal = await Proposal.findById(req.params.id);
 
@@ -128,6 +162,29 @@ app.post('/api/proposals/:id/vote', async (req, res) => {
   }
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
+});
+
+// 404 handler
+app.use((req, res) => {
+  console.log('404 - Not Found:', req.method, req.url);
+  res.status(404).json({ error: 'Not Found' });
+});
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
+  console.log('Environment:', {
+    nodeEnv: process.env.NODE_ENV,
+    port: port,
+    mongoUri: process.env.MONGODB_URI ? 'Set' : 'Not Set',
+    frontendUrl: process.env.FRONTEND_URL || '*',
+    cloudinary: {
+      cloudName: !!process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: !!process.env.CLOUDINARY_API_KEY,
+      apiSecret: !!process.env.CLOUDINARY_API_SECRET
+    }
+  });
 });
