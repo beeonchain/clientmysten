@@ -20,21 +20,38 @@ const port = process.env.PORT || 10000;
 
 // Connect to MongoDB with better error handling
 console.log('Attempting to connect to MongoDB...');
+mongoose.set('debug', true); // Enable mongoose debug mode
 mongoose.connect(process.env.MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
   dbName: 'mystenlabs'
 })
 .then(() => {
   console.log('Successfully connected to MongoDB');
+  console.log('Connection state:', mongoose.connection.readyState);
+  console.log('Database name:', mongoose.connection.name);
 })
 .catch(err => {
   console.error('MongoDB connection error details:', {
     name: err.name,
     message: err.message,
     code: err.code,
-    uri: process.env.MONGODB_URI ? 'URI is set' : 'URI is missing'
+    uri: process.env.MONGODB_URI ? 'URI is set' : 'URI is missing',
+    state: mongoose.connection.readyState
   });
   console.log('Server will start but database operations will fail');
+});
+
+// Add connection event listeners
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log('MongoDB reconnected');
 });
 
 // Multer configuration for file uploads
