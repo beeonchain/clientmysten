@@ -22,11 +22,15 @@ function VotePage() {
 
   const fetchProposals = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/proposals`);
+      console.log('Fetching proposals from:', `${BACKEND_URL}/api/proposals`);
+      const response = await axios.get(`${BACKEND_URL}/api/proposals`, {
+        withCredentials: true
+      });
+      console.log('Fetched proposals:', response.data);
       setProposals(response.data);
     } catch (error) {
       console.error('Error fetching proposals:', error);
-      toast.error("Failed to fetch proposals");
+      toast.error(error.response?.data?.error || "Failed to fetch proposals");
     }
   };
 

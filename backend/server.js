@@ -108,13 +108,18 @@ const router = express.Router();
 
 router.get('/proposals', async (req, res) => {
   try {
+    console.log('GET /proposals - Checking database connection');
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
     }
+
+    console.log('GET /proposals - Fetching proposals from database');
     const proposals = await Proposal.find().sort({ createdAt: -1 });
+    console.log(`GET /proposals - Found ${proposals.length} proposals`);
+    
     res.json(proposals);
   } catch (error) {
-    console.error('Error fetching proposals:', error);
+    console.error('GET /proposals - Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
