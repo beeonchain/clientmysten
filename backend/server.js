@@ -29,7 +29,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 });
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 10000;
 
 // Multer configuration for file uploads
 const storage = multer.memoryStorage();
@@ -56,7 +56,7 @@ async function uploadToCloudinary(buffer) {
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || '*',
   credentials: true
 }));
 app.use(express.json());
@@ -128,6 +128,6 @@ app.post('/api/proposals/:id/vote', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });
